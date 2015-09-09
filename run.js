@@ -11,7 +11,7 @@ $(function() {
     var width = 0;
     var height = 0;
     var coefficient = 100;
-    var shortObj,middleObj,longObj;
+    var shortObj,middleObj,longObj,moveXObj,moveYObj,scaleYObj,winkObj,shakeObj;
     var paper = Snap().remove();
     paper.el('title', '');
     $(paper.node).find('title').html('Eye');
@@ -26,11 +26,44 @@ $(function() {
         paper.append(graphic);
         paper.prependTo(document.getElementById('svg'));
 
+        //mouseMove Set
         shortObj = graphic.select('.svg-lange-short');
         middleObj = graphic.select('.svg-lange-middle');
         longObj = graphic.select('.svg-lange-long');
         $window.on('resize.svg', updateOffset).trigger('resize.svg');
         $window.on('mousemove.svg', mouseMove);
+
+        //partsAnimation Set
+        moveXObj = graphic.selectAll('.moveX');
+        moveYObj = graphic.selectAll('.moveY');
+        scaleYObj = graphic.selectAll('.scaleY');
+        winkObj = graphic.selectAll('.wink');
+        shakeObj = graphic.selectAll('.shake');
+
+        if(moveXObj.length !== 0){
+            for(var i=0; i<=moveXObj.length - 1; i++){
+                cosMoveAnimation(moveXObj[i], 100, 2.0);
+            }
+        }
+
+        if(moveYObj.length !== 0){
+            for(var i=0; i<=moveYObj.length - 1; i++){
+                sinMoveAnimation(moveYObj[i], 100, 2.0);
+            }
+        }
+
+        if(shakeObj.length !== 0){
+            for(var i=0; i<=shakeObj.length - 1; i++){
+                shakeAnimation(shakeObj[i], 3, 0.1, 1.0, true);
+            }
+        }
+
+        if(winkObj.length !== 0){
+            for(var i=0; i<=winkObj.length - 1; i++){
+                var winkObjBox = winkObj[i].getBBox();
+                winkAnimation(winkObj[i], winkObjBox, 0.1, 0.5, 2.0, true);
+            }
+        }
     });
 
     var clearID = function(targetArray){
@@ -43,6 +76,10 @@ $(function() {
             }
         }
     };
+
+    /* -----------------------------------
+        mouseMove Animation
+    ----------------------------------- */
 
     var updateOffset = function(){
         var bound = eventElement.getBoundingClientRect();
@@ -72,5 +109,78 @@ $(function() {
 
     var clamp = function(a, b, c){
         return a < b ? b : (a > c ? c : a);
+    };
+
+    /* -----------------------------------
+     parts Animation
+     ----------------------------------- */
+
+    var sinMoveAnimation = function(targetObj, scale, moveTime){
+        var animObj = {progress: 0};
+        TweenLite.to(animObj, moveTime, {
+            progress: 1,
+            ease: Linear.easeNone,
+            onUpdate: function(){
+                var nowRotate = (360*animObj.progress) * Math.PI / 180;
+                var sinTxt = 'translate(0,'+scale*Math.sin(nowRotate)+')';
+                targetObj.node.setAttribute('transform', sinTxt);
+            },
+            onComplete: function(){
+                sinMoveAnimation(targetObj, scale, moveTime);
+            }
+        });
+    };
+
+    var cosMoveAnimation = function(targetObj, scale, moveTime){
+        var animObj = {progress: 0};
+        TweenLite.to(animObj, moveTime, {
+            progress: 1,
+            ease: Linear.easeNone,
+            onUpdate: function(){
+                var nowRotate = ((360*animObj.progress)+90) * Math.PI / 180;
+                var cosTxt = 'translate('+scale*Math.cos(nowRotate)+',0)';
+                targetObj.node.setAttribute('transform', cosTxt);
+            },
+            onComplete: function(){
+                cosMoveAnimation(targetObj, scale, moveTime);
+            }
+        });
+    };
+
+    var shakeAnimation = function(targetObj, move, shakeTime, delayTime, isFirst){
+        var delayT;
+        if(isFirst){delayT = 0;} else {delayT = delayTime;}
+        var animObj = {progress: 0};
+        TweenLite.to(animObj, shakeTime, {
+            progress: 1,
+            delay: delayT,
+            ease: Cubic.easeInOut,
+            onUpdate: function(){
+                var shakeTxt = 'translate(0,'+move*animObj.progress+')';
+                targetObj.node.setAttribute('transform', shakeTxt);
+            },
+            onComplete: function(){
+                targetObj.node.setAttribute('transform', 'translate(0,0)');
+                shakeAnimation(targetObj, move, shakeTime, delayTime, false);
+            }
+        });
+    };
+
+    var winkAnimation = function(targetObj, targetObBox, scale, winkTime, delayTime, isFirst){
+        var delayT;
+        if(isFirst){delayT = 0;} else {delayT = delayTime;}
+        var animObj = {progress: scale};
+        TweenLite.to(animObj, winkTime, {
+            progress: 1,
+            delay: delayT,
+            ease: Cubic.easeInOut,
+            onUpdate: function(){
+                var scaleTxt = 'scale(1,' + animObj.progress + ',' + targetObBox.cx + ',' + targetObBox.cy + ')';
+                targetObj.transform(scaleTxt);
+            },
+            onComplete: function(){
+                winkAnimation(targetObj, targetObBox, scale, winkTime, delayTime, false);
+            }
+        });
     };
 });
